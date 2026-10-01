@@ -58,19 +58,39 @@ const CITIES = [
 async function fetchCityWeather(city) {
   const api =
     `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}` +
-    "&current=temperature_2m,weather_code" +
-    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
-    "&timezone=Asia%2FTokyo&forecast_days=1";
+    "&current=temperature_2m,weather_code,apparent_temperature,relative_humidity_2m,wind_speed_10m" +
+    "&hourly=temperature_2m,precipitation_probability,weather_code" +
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max" +
+    "&timezone=Asia%2FTokyo&forecast_days=3";
   const res = await fetch(api, { cf: { cacheTtl: 900, cacheEverything: true } });
   if (!res.ok) throw new Error(`weather ${res.status}`);
   const d = await res.json();
+  const day = (i) => ({
+    date: d.daily.time[i],
+    ...describeWeather(d.daily.weather_code[i]),
+    max: Math.round(d.daily.temperature_2m_max[i]),
+    min: Math.round(d.daily.temperature_2m_min[i]),
+    rain: d.daily.precipitation_probability_max[i],
+  });
+  // 今日の 6時〜21時 を3時間おき
+  const hours = [6, 9, 12, 15, 18, 21].map((h) => ({
+    hour: h,
+    temp: Math.round(d.hourly.temperature_2m[h]),
+    rain: d.hourly.precipitation_probability[h],
+    icon: describeWeather(d.hourly.weather_code[h]).icon,
+  }));
   return {
     place: city.name,
-    ...describeWeather(d.daily.weather_code[0]),
+    ...day(0),
     temp: Math.round(d.current.temperature_2m),
-    max: Math.round(d.daily.temperature_2m_max[0]),
-    min: Math.round(d.daily.temperature_2m_min[0]),
-    rain: d.daily.precipitation_probability_max[0],
+    feels: Math.round(d.current.apparent_temperature),
+    humidity: d.current.relative_humidity_2m,
+    wind: Math.round(d.current.wind_speed_10m),
+    uv: Math.round(d.daily.uv_index_max[0]),
+    sunrise: d.daily.sunrise[0].slice(11, 16),
+    sunset: d.daily.sunset[0].slice(11, 16),
+    hours,
+    days: [day(1), day(2)],
   };
 }
 

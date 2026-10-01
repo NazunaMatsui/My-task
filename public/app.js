@@ -70,6 +70,8 @@ async function updateCarry() {
 function render() {
   $("dateLabel").textContent = formatDate(current);
   $("today").hidden = current === jstToday();
+  $("kicker").textContent =
+    current === jstToday() ? "✨ TODAY'S LIST ✨" : current < jstToday() ? "⏪ あの日のリスト" : "⏩ これからのリスト";
 
   const list = $("list");
   list.replaceChildren();
@@ -81,12 +83,16 @@ function render() {
     cb.type = "checkbox";
     cb.checked = !!t.done;
     cb.setAttribute("aria-label", "完了");
-    cb.addEventListener("change", () =>
+    cb.addEventListener("change", () => {
+      if (cb.checked) {
+        const r = cb.getBoundingClientRect();
+        burst(r.left + r.width / 2, r.top + r.height / 2);
+      }
       guard(async () => {
         await api(`/api/tasks/${t.id}`, { method: "PATCH", body: { done: cb.checked } });
         await load();
-      })
-    );
+      });
+    });
 
     const title = document.createElement("span");
     title.className = "title";
@@ -112,11 +118,36 @@ function render() {
   const done = tasks.filter((t) => t.done).length;
   $("empty").hidden = tasks.length > 0;
   $("barFill").style.width = tasks.length ? `${(done / tasks.length) * 100}%` : "0";
-  $("progressText").textContent = tasks.length
-    ? done === tasks.length
-      ? `全部完了！ ${done} / ${tasks.length}`
-      : `${done} / ${tasks.length} 完了`
-    : "";
+  $("progressText").textContent = progressMessage(done, tasks.length);
+}
+
+function progressMessage(done, total) {
+  if (!total) return "";
+  if (done === total) return `🎉 ぜんぶ完了！最高の1日！ ${done} / ${total}`;
+  const left = total - done;
+  if (done === 0) return `🔥 さあ始めよう！ 0 / ${total}`;
+  if (left === 1) return `💪 あと1つ！ ${done} / ${total}`;
+  if (done / total >= 0.5) return `🚀 いい調子！あと${left}つ ${done} / ${total}`;
+  return `⭐ ナイス！あと${left}つ ${done} / ${total}`;
+}
+
+// 完了したときの紙吹雪（動きを減らす設定の人には出さない）
+function burst(x, y, count = 14) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const symbols = ["🎉", "✨", "⭐", "💖", "🌈", "🔥"];
+  const fx = $("fx");
+  for (let i = 0; i < count; i++) {
+    const p = el("span", "confetti", symbols[i % symbols.length]);
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 60 + Math.random() * 110;
+    p.style.left = `${x}px`;
+    p.style.top = `${y}px`;
+    p.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
+    p.style.setProperty("--dy", `${Math.sin(angle) * dist - 40}px`);
+    p.style.setProperty("--rot", `${Math.random() * 360 - 180}deg`);
+    fx.append(p);
+    setTimeout(() => p.remove(), 1500);
+  }
 }
 
 function startEdit(task, span) {
@@ -150,7 +181,10 @@ function startEdit(task, span) {
 
 function go(date) {
   current = date;
-  // 天気とニュースは補助情報。失敗してもリスト本体には影響させない
+  guard(load);
+}
+
+// 天気とニュースは補助情報。失敗してもリスト本体には影響させない
 const el = (tag, cls, text) => {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -158,23 +192,93 @@ const el = (tag, cls, text) => {
   return e;
 };
 
+let weatherCities = [];
+let openCity = null;
+
+function renderWeather() {
+  const box = $("weather");
+  box.replaceChildren(
+    ...weatherCities.map((c) => {
+      const card = el("button", "card");
+      card.type = "button";
+      card.setAttribute("aria-expanded", String(openCity === c.place));
+      card.append(
+        el("div", "place", c.place),
+        el("div", "icon", c.icon),
+        el("div", "main", `${c.label} ${c.temp}℃`),
+        el("div", "sub", `${c.max}° / ${c.min}°　☔${c.rain}%`),
+        el("div", "tap", "タップで詳細")
+      );
+      card.addEventListener("click", () => {
+        openCity = openCity === c.place ? null : c.place;
+        renderWeather();
+      });
+      return card;
+    })
+  );
+  box.hidden = weatherCities.length === 0;
+  renderDetail();
+}
+
+function fact(value, label) {
+  const f = el("div", "fact");
+  f.append(el("b", "", value), el("span", "", label));
+  return f;
+}
+
+function renderDetail() {
+  const box = $("weatherDetail");
+  const c = weatherCities.find((x) => x.place === openCity);
+  box.hidden = !c;
+  if (!c) return;
+
+  const title = el("h3", "", `${c.icon} ${c.place}の天気`);
+  const close = el("button", "", "×");
+  close.type = "button";
+  close.setAttribute("aria-label", "閉じる");
+  close.addEventListener("click", () => {
+    openCity = null;
+    renderWeather();
+  });
+  title.append(close);
+
+  const facts = el("div", "facts");
+  facts.append(
+    fact(`${c.feels}℃`, "体感"),
+    fact(`${c.humidity}%`, "湿度"),
+    fact(`${c.wind}km/h`, "風速"),
+    fact(c.sunrise, "日の出 🌅"),
+    fact(c.sunset, "日の入 🌇"),
+    fact(`${c.uv}`, "UV指数 ☀️")
+  );
+
+  const hours = el("div", "hours");
+  for (const h of c.hours) {
+    const col = el("div");
+    col.append(el("div", "h", `${h.hour}時`), el("div", "", h.icon), el("div", "t", `${h.temp}°`), el("div", "r", `☔${h.rain}%`));
+    hours.append(col);
+  }
+
+  const days = el("div", "days");
+  c.days.forEach((d, i) => {
+    const row = el("div");
+    row.append(
+      el("span", "d", i === 0 ? "明日" : "明後日"),
+      el("span", "l", `${d.icon} ${d.label}`),
+      el("span", "", `${d.max}° / ${d.min}°`),
+      el("span", "r", `☔${d.rain}%`)
+    );
+    days.append(row);
+  });
+
+  box.replaceChildren(title, facts, hours, days);
+}
+
 async function loadWeather() {
   try {
     const { cities } = await api("/api/weather");
-    const box = $("weather");
-    box.replaceChildren(
-      ...cities.map((c) => {
-        const card = el("div", "card");
-        card.append(
-          el("div", "place", c.place),
-          el("div", "icon", c.icon),
-          el("div", "main", `${c.label} ${c.temp}℃`),
-          el("div", "sub", `${c.max}° / ${c.min}°　☔${c.rain}%`)
-        );
-        return card;
-      })
-    );
-    box.hidden = false;
+    weatherCities = cities;
+    renderWeather();
   } catch {}
 }
 
@@ -247,11 +351,6 @@ $("newsTabs").addEventListener("click", (e) => {
   loadNews();
 });
 
-guard(load);
-loadWeather();
-loadNews();
-}
-
 $("prev").addEventListener("click", () => go(shiftDate(current, -1)));
 $("next").addEventListener("click", () => go(shiftDate(current, 1)));
 $("today").addEventListener("click", () => go(jstToday()));
@@ -284,3 +383,5 @@ document.addEventListener("visibilitychange", () => {
 });
 
 guard(load);
+loadWeather();
+loadNews();
