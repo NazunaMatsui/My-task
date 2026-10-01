@@ -185,7 +185,9 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; line-height: 1.25; }
 .days { display: grid; gap: 4px; }
 .days > div { display: flex; align-items: center; gap: 8px; font-size: .85rem; padding: 6px 10px; border-radius: 8px; background: var(--card); }
 .days .wx { width: 20px; height: 20px; }
-.days .d { width: 3.4em; font-weight: 700; } .days .l { flex: 1; } .days .r { color: var(--blue); font-size: .75rem; }
+.days .d { width: 5.6em; font-weight: 700; font-size: .82rem; white-space: nowrap; } .days .d.sat { color: var(--blue); } .days .d.sun { color: var(--orange); }
+.days .l { flex: 1; min-width: 0; } .days .t { font-variant-numeric: tabular-nums; } .days .r { width: 2.8em; text-align: right; color: var(--blue); font-size: .75rem; }
+.detail h4 { margin: 12px 0 6px; font-size: .78rem; color: var(--muted); font-weight: 700; letter-spacing: .04em; }
 
 /* ニュース */
 .news-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }

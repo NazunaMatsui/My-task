@@ -428,18 +428,26 @@ function renderDetail() {
 
   const days = el("div", "days");
   c.days.forEach((d, i) => {
+    const [, mo, dd] = d.date.split("-").map(Number);
+    const dow = new Date(`${d.date}T00:00:00Z`).getUTCDay();
+    const label = i === 0 ? "今日" : i === 1 ? "明日" : `${mo}/${dd}（${WEEK[dow]}）`;
     const row = el("div");
+    const name = el("span", "d", label);
+    if (dow === 0) name.classList.add("sun");
+    if (dow === 6) name.classList.add("sat");
     row.append(
-      el("span", "d", i === 0 ? "明日" : "明後日"),
+      name,
       wxIcon(d.kind),
       el("span", "l", d.label),
-      el("span", "", `${d.max}° / ${d.min}°`),
-      el("span", "r", `降水 ${d.rain}%`)
+      el("span", "t", `${d.max}° / ${d.min}°`),
+      el("span", "r", `${d.rain}%`)
     );
     days.append(row);
   });
 
-  box.replaceChildren(title, facts, hours, days);
+  const hoursHead = el("h4", "", "今日の時間ごと");
+  const daysHead = el("h4", "", "週間予報");
+  box.replaceChildren(title, facts, hoursHead, hours, daysHead, days);
 }
 
 async function loadWeather() {

@@ -61,7 +61,7 @@ async function fetchCityWeather(city) {
     "&current=temperature_2m,weather_code,apparent_temperature,relative_humidity_2m,wind_speed_10m" +
     "&hourly=temperature_2m,precipitation_probability,weather_code" +
     "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max" +
-    "&timezone=Asia%2FTokyo&forecast_days=3";
+    "&timezone=Asia%2FTokyo&forecast_days=7";
   const res = await fetch(api, { cf: { cacheTtl: 900, cacheEverything: true } });
   if (!res.ok) throw new Error(`weather ${res.status}`);
   const d = await res.json();
@@ -90,7 +90,7 @@ async function fetchCityWeather(city) {
     sunrise: d.daily.sunrise[0].slice(11, 16),
     sunset: d.daily.sunset[0].slice(11, 16),
     hours,
-    days: [day(1), day(2)],
+    days: Array.from({ length: 7 }, (_, i) => day(i)),
   };
 }
 
