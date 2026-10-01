@@ -38,15 +38,15 @@ async function readBody(request) {
 
 // ---- 天気（Open-Meteo）とニュース（RSS） ----
 const WEATHER_CODES = [
-  [[0], "快晴", "☀️"], [[1], "晴れ", "🌤️"], [[2], "くもり時々晴れ", "⛅"], [[3], "くもり", "☁️"],
-  [[45, 48], "霧", "🌫️"], [[51, 53, 55, 56, 57], "霧雨", "🌦️"],
-  [[61, 63, 65, 66, 67, 80, 81, 82], "雨", "🌧️"], [[71, 73, 75, 77, 85, 86], "雪", "❄️"],
-  [[95, 96, 99], "雷雨", "⛈️"],
+  [[0], "快晴", "sun"], [[1], "晴れ", "sun"], [[2], "くもり時々晴れ", "partly"], [[3], "くもり", "cloud"],
+  [[45, 48], "霧", "fog"], [[51, 53, 55, 56, 57], "霧雨", "rain"],
+  [[61, 63, 65, 66, 67, 80, 81, 82], "雨", "rain"], [[71, 73, 75, 77, 85, 86], "雪", "snow"],
+  [[95, 96, 99], "雷雨", "thunder"],
 ];
 
 function describeWeather(code) {
   const hit = WEATHER_CODES.find(([codes]) => codes.includes(code));
-  return hit ? { label: hit[1], icon: hit[2] } : { label: "不明", icon: "❓" };
+  return hit ? { label: hit[1], kind: hit[2] } : { label: "不明", kind: "cloud" };
 }
 
 const CITIES = [
@@ -77,7 +77,7 @@ async function fetchCityWeather(city) {
     hour: h,
     temp: Math.round(d.hourly.temperature_2m[h]),
     rain: d.hourly.precipitation_probability[h],
-    icon: describeWeather(d.hourly.weather_code[h]).icon,
+    kind: describeWeather(d.hourly.weather_code[h]).kind,
   }));
   return {
     place: city.name,

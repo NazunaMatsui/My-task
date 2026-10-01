@@ -72,8 +72,7 @@ async function updateCarry() {
 function render() {
   $("dateLabel").textContent = formatDate(current);
   $("today").hidden = current === jstToday();
-  $("kicker").textContent =
-    current === jstToday() ? "✨ TODAY'S LIST ✨" : current < jstToday() ? "⏪ あの日のリスト" : "⏩ これからのリスト";
+  $("kicker").textContent = current === jstToday() ? "TODAY" : current < jstToday() ? "PAST" : "UPCOMING";
 
   const list = $("list");
   list.replaceChildren();
@@ -124,35 +123,33 @@ function render() {
   $("ringPct").textContent = `${pct}%`;
   $("statDone").textContent = String(done);
   $("statLeft").textContent = String(tasks.length - done);
-  $("progressText").textContent = progressMessage(done, tasks.length) || "タスクを入れてみよう";
+  $("progressText").textContent = progressMessage(done, tasks.length) || "タスクなし";
 }
 
 function progressMessage(done, total) {
   if (!total) return "";
-  if (done === total) return `🎉 ぜんぶ完了！最高の1日！ ${done} / ${total}`;
-  const left = total - done;
-  if (done === 0) return `🔥 さあ始めよう！ 0 / ${total}`;
-  if (left === 1) return `💪 あと1つ！ ${done} / ${total}`;
-  if (done / total >= 0.5) return `🚀 いい調子！あと${left}つ ${done} / ${total}`;
-  return `⭐ ナイス！あと${left}つ ${done} / ${total}`;
+  if (done === total) return `すべて完了（${done} / ${total}）`;
+  if (done === 0) return `未着手（0 / ${total}）`;
+  return `あと${total - done}件（${done} / ${total}）`;
 }
 
-// 完了したときの紙吹雪（動きを減らす設定の人には出さない）
-function burst(x, y, count = 14) {
+// 完了したときの演出（動きを減らす設定の人には出さない）
+function burst(x, y, count = 12) {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const symbols = ["🎉", "✨", "⭐", "💖", "🌈", "🔥"];
+  const colors = ["#4a3fb5", "#e8703a", "#1f9d72", "#2f6fd6"];
   const fx = $("fx");
   for (let i = 0; i < count; i++) {
-    const p = el("span", "confetti", symbols[i % symbols.length]);
+    const p = el("span", "confetti");
     const angle = Math.random() * Math.PI * 2;
-    const dist = 60 + Math.random() * 110;
+    const dist = 40 + Math.random() * 80;
     p.style.left = `${x}px`;
     p.style.top = `${y}px`;
+    p.style.background = colors[i % colors.length];
     p.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
-    p.style.setProperty("--dy", `${Math.sin(angle) * dist - 40}px`);
-    p.style.setProperty("--rot", `${Math.random() * 360 - 180}deg`);
+    p.style.setProperty("--dy", `${Math.sin(angle) * dist - 30}px`);
+    p.style.setProperty("--rot", `${Math.random() * 360}deg`);
     fx.append(p);
-    setTimeout(() => p.remove(), 1500);
+    setTimeout(() => p.remove(), 1200);
   }
 }
 
@@ -303,8 +300,10 @@ $("searchInput").addEventListener("input", (e) => {
         ...(found.length
           ? found.map((t) => {
               const li = el("li");
-              const b = el("button", "", `${t.done ? "✅ " : ""}${t.title}`);
+              const b = el("button");
               b.type = "button";
+              if (t.done) b.append(el("span", "tag", "済"));
+              b.append(t.title);
               b.append(el("small", "", formatDate(t.date)));
               b.addEventListener("click", () => {
                 $("searchInput").value = "";
@@ -342,6 +341,23 @@ const el = (tag, cls, text) => {
   return e;
 };
 
+// 天気アイコン（線画SVG。固定の文字列のみを使用）
+const WX_ICONS = {
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>',
+  partly: '<circle cx="8" cy="8" r="3"/><path d="M8 2v1M2 8h1M3.8 3.8l.7.7M12.2 3.8l-.7.7"/><path d="M8 20h9a3.5 3.5 0 0 0 .4-6.98A5 5 0 0 0 8 13a3.5 3.5 0 0 0 0 7z"/>',
+  cloud: '<path d="M7 19h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7 10.5 4.25 4.25 0 0 0 7 19z"/>',
+  fog: '<path d="M7 14h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7 5.5 4.25 4.25 0 0 0 7 14z"/><path d="M5 18h14M8 21h8"/>',
+  rain: '<path d="M7 14h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7 5.5 4.25 4.25 0 0 0 7 14z"/><path d="M8 17l-1 3M12 17l-1 3M16 17l-1 3"/>',
+  snow: '<path d="M7 14h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7 5.5 4.25 4.25 0 0 0 7 14z"/><path d="M8 18v.01M12 18v.01M16 18v.01M10 21v.01M14 21v.01"/>',
+  thunder: '<path d="M7 14h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7 5.5 4.25 4.25 0 0 0 7 14z"/><path d="M12 14l-2 4h4l-2 4"/>',
+};
+
+function wxIcon(kind) {
+  const span = el("span", `wx ${kind}`);
+  span.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${WX_ICONS[kind] || WX_ICONS.cloud}</svg>`;
+  return span;
+}
+
 let weatherCities = [];
 let openCity = null;
 
@@ -354,9 +370,10 @@ function renderWeather() {
       card.setAttribute("aria-expanded", String(openCity === c.place));
       card.append(
         el("div", "place", c.place),
-        el("div", "icon", c.icon),
+        wxIcon(c.kind),
         el("div", "main", `${c.label} ${c.temp}℃`),
-        el("div", "sub", `${c.max}° / ${c.min}°　☔${c.rain}%`),
+        el("div", "sub", `${c.max}° / ${c.min}°`),
+        el("div", "sub", `降水 ${c.rain}%`),
         el("div", "tap", "タップで詳細")
       );
       card.addEventListener("click", () => {
@@ -382,7 +399,7 @@ function renderDetail() {
   box.hidden = !c;
   if (!c) return;
 
-  const title = el("h3", "", `${c.icon} ${c.place}の天気`);
+  const title = el("h3");
   const close = el("button", "", "×");
   close.type = "button";
   close.setAttribute("aria-label", "閉じる");
@@ -390,22 +407,22 @@ function renderDetail() {
     openCity = null;
     renderWeather();
   });
-  title.append(close);
+  title.append(wxIcon(c.kind), `${c.place}の天気`, close);
 
   const facts = el("div", "facts");
   facts.append(
     fact(`${c.feels}℃`, "体感"),
     fact(`${c.humidity}%`, "湿度"),
     fact(`${c.wind}km/h`, "風速"),
-    fact(c.sunrise, "日の出 🌅"),
-    fact(c.sunset, "日の入 🌇"),
-    fact(`${c.uv}`, "UV指数 ☀️")
+    fact(c.sunrise, "日の出"),
+    fact(c.sunset, "日の入"),
+    fact(`${c.uv}`, "UV指数")
   );
 
   const hours = el("div", "hours");
   for (const h of c.hours) {
     const col = el("div");
-    col.append(el("div", "h", `${h.hour}時`), el("div", "", h.icon), el("div", "t", `${h.temp}°`), el("div", "r", `☔${h.rain}%`));
+    col.append(el("div", "h", `${h.hour}時`), wxIcon(h.kind), el("div", "t", `${h.temp}°`), el("div", "r", `${h.rain}%`));
     hours.append(col);
   }
 
@@ -414,9 +431,10 @@ function renderDetail() {
     const row = el("div");
     row.append(
       el("span", "d", i === 0 ? "明日" : "明後日"),
-      el("span", "l", `${d.icon} ${d.label}`),
+      wxIcon(d.kind),
+      el("span", "l", d.label),
       el("span", "", `${d.max}° / ${d.min}°`),
-      el("span", "r", `☔${d.rain}%`)
+      el("span", "r", `降水 ${d.rain}%`)
     );
     days.append(row);
   });
