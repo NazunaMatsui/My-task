@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#3f35a5">
+  <title>案件ボード</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233f35a5'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="board.css">
+</head>
+<body>
+  <nav class="side" aria-label="メニュー">
+    <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4L18 8"/></svg></div>
+    <a class="side-link" href="index.html" title="今日のリスト" aria-label="今日のリスト">
+      <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+    </a>
+    <button class="side-btn active" data-target="top" title="案件ボード" aria-label="案件ボード">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="6" height="16" rx="1.5"/><rect x="11" y="4" width="6" height="10" rx="1.5"/><path d="M20 4v6"/></svg>
+    </button>
+    <button class="side-btn" data-target="sec-review" title="確認が必要な事項" aria-label="確認が必要な事項">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.01"/></svg>
+    </button>
+    <button class="side-btn" data-target="sec-sources" title="情報源の同期" aria-label="情報源の同期">
+      <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.5-5.8M20 4v5h-5"/></svg>
+    </button>
+    <button class="side-btn" data-target="sec-settings" title="設定" aria-label="設定">
+      <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    </button>
+  </nav>
+
+  <div class="wrap" id="top">
+    <header class="topbar">
+      <div class="when">
+        <div class="date">
+          <p class="kicker">PROJECT BOARD</p>
+          <h1>案件ボード</h1>
+        </div>
+      </div>
+      <div class="top-actions">
+        <span id="syncChip" class="chip muted" role="status">読み込み中</span>
+        <button id="reload" class="btn ghost" type="button">表示を更新</button>
+      </div>
+    </header>
+
+    <p id="boardError" class="error" role="alert" hidden></p>
+
+    <div id="onboarding" class="card onboarding" hidden>
+      <h2>はじめに：案件と情報源を登録します</h2>
+      <ol>
+        <li>「設定」で案件を登録します（案件名・稼働状態）。</li>
+        <li>案件ごとに、関連するフォルダ・メールラベルなどを対応づけます。</li>
+        <li>情報源（Gmail、Google ドライブなど）を登録します。取得はAI処理側が行い、このボードに自動で反映されます。</li>
+      </ol>
+      <button class="btn" type="button" data-goto="sec-settings">設定を開く</button>
+    </div>
+
+    <main class="grid pm-grid">
+      <section class="card pm-stats" aria-label="サマリー">
+        <button class="pm-stat" data-goto="sec-due"><b id="cDueToday">0</b><span>今日が期限</span></button>
+        <button class="pm-stat" data-goto="sec-due"><b id="cDueWeek">0</b><span>今週が期限</span></button>
+        <button class="pm-stat warn" data-goto="sec-overdue"><b id="cOverdue">0</b><span>期限超過</span></button>
+        <button class="pm-stat" data-goto="sec-review"><b id="cReview">0</b><span>確認が必要</span></button>
+      </section>
+
+      <section class="card" id="sec-mine"><h2>自分が対応すること</h2><div id="listMine"></div></section>
+      <section class="card" id="sec-waiting"><h2>待ち</h2><div id="listWaiting"></div></section>
+      <section class="card" id="sec-overdue"><h2>期限超過</h2><div id="listOverdue"></div></section>
+
+      <section class="card pm-wide" id="sec-projects"><h2>案件ごとの現在の状況と次の一手</h2><div id="listProjects" class="proj-grid"></div></section>
+      <section class="card" id="sec-stalled"><h2>動きが止まっている案件</h2><div id="listStalled"></div></section>
+
+      <section class="card" id="sec-due"><h2>今日・今週が期限</h2><div id="listDue"></div></section>
+      <section class="card" id="sec-suggest"><h2>AIからの提案</h2><p class="hint">提案は確定したタスクではありません。採用するとタスクになります。</p><div id="listSuggest"></div></section>
+      <section class="card" id="sec-review"><h2>確認が必要な事項</h2><div id="listReview"></div></section>
+
+      <section class="card pm-wide3" id="sec-sources"><h2>情報源の同期状態</h2><div id="listSources"></div></section>
+
+      <section class="card pm-wide3" id="sec-settings">
+        <details>
+          <summary>設定（案件台帳・情報源・収集とAI送信の範囲）</summary>
+          <div id="settingsBody" class="settings"></div>
+        </details>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="detail" aria-label="案件詳細"></dialog>
+  <script src="board.js"></script>
+</body>
+</html>

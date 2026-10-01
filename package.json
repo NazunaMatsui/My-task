@@ -5,6 +5,7 @@
   "scripts": {
     "start": "wrangler d1 migrations apply my-task --local < /dev/null && wrangler dev",
     "dev": "wrangler dev",
+    "test": "node test/pm.test.mjs",
     "deploy": "wrangler deploy",
     "db:migrate:local": "wrangler d1 migrations apply my-task --local < /dev/null",
     "db:migrate": "wrangler d1 migrations apply my-task --remote"

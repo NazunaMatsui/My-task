@@ -1,3 +1,5 @@
+import { applyPending, handlePm, purgeExpired } from "./pm/api.js";
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const json = (data, status = 200) =>
@@ -12,19 +14,29 @@ const unauthorized = () =>
     headers: { "www-authenticate": 'Basic realm="My Task", charset="UTF-8"' },
   });
 
-// APP_PASSWORD が設定されている場合のみ Basic 認証を要求する（ユーザー名は任意）
-function authorized(request, env) {
-  if (!env.APP_PASSWORD) return true;
+// APP_PASSWORD が設定されている場合のみ Basic 認証を要求する（ユーザー名は任意）。
+//   APP_PASSWORD       … 編集もできる利用者
+//   APP_VIEWER_PASSWORD … 閲覧のみの利用者（任意）
+//   INGEST_TOKEN       … 案件ボードへの取り込み専用（Authorization: Bearer）
+// 戻り値: "editor" | "viewer" | "ingest" | null
+function authRole(request, env, pathname) {
   const header = request.headers.get("authorization") || "";
-  if (!header.startsWith("Basic ")) return false;
+  if (header.startsWith("Bearer ")) {
+    const ok = env.INGEST_TOKEN && header.slice(7) === env.INGEST_TOKEN && pathname.startsWith("/api/pm/");
+    return ok ? "ingest" : null;
+  }
+  if (!env.APP_PASSWORD) return "editor";
+  if (!header.startsWith("Basic ")) return null;
   let decoded;
   try {
     decoded = atob(header.slice(6));
   } catch {
-    return false;
+    return null;
   }
   const password = decoded.slice(decoded.indexOf(":") + 1);
-  return password === env.APP_PASSWORD;
+  if (password === env.APP_PASSWORD) return "editor";
+  if (env.APP_VIEWER_PASSWORD && password === env.APP_VIEWER_PASSWORD) return "viewer";
+  return null;
 }
 
 async function readBody(request) {
@@ -297,16 +309,28 @@ async function handleApi(request, env, url) {
 
 export default {
   async fetch(request, env) {
-    if (!authorized(request, env)) return unauthorized();
     const url = new URL(request.url);
+    const role = authRole(request, env, url.pathname);
+    if (!role) return unauthorized();
     if (url.pathname.startsWith("/api/")) {
       try {
+        if (url.pathname.startsWith("/api/pm/")) return await handlePm(request, env, url, role);
+        // 閲覧専用の利用者は、既存のリストも変更できない
+        if (role === "viewer" && request.method !== "GET") return json({ error: "閲覧専用のため変更できません" }, 403);
+        if (role === "ingest") return json({ error: "このトークンでは操作できません" }, 403);
         return await handleApi(request, env, url);
       } catch (e) {
         console.error(e);
         return json({ error: "サーバーエラー" }, 500);
       }
     }
+    if (role === "ingest") return unauthorized();
     return env.ASSETS.fetch(request);
+  },
+
+  // 定期実行: 取り込み待ちの反映と、保存期間を過ぎた記録の削除
+  async scheduled(_event, env) {
+    await applyPending(env.DB);
+    await purgeExpired(env.DB);
   },
 };

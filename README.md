@@ -37,3 +37,13 @@ npm run deploy
 - 天気: 姫路市・宍粟市・神戸市の今日の天気（[Open-Meteo](https://open-meteo.com/)、APIキー不要）。都市は `src/index.js` の `CITIES`。
 - ニュース: エンタメ / IT / 政治・経済 / 恋愛 のタブ切り替え。配信元は `src/index.js` の `NEWS_CATEGORIES`（Googleニュース・ITmedia）。
 - 取得に失敗してもリスト本体は通常どおり動きます。
+
+## 案件ボード（自動整理）
+`/board.html`。メール・ドライブなどの情報から、案件の状況・タスク・次にすべきことを自動で整理して表示します。
+設計・情報源・費用・運用は [docs/project-board.md](docs/project-board.md)、同期ジョブの手順は [docs/sync-job-prompt.md](docs/sync-job-prompt.md)。
+
+```sh
+npm test                          # 反映ルールの検証（ローカルDB）
+printf 'INGEST_TOKEN=dev-token\n' > .dev.vars   # ローカル確認用
+node scripts/seed-demo.mjs        # 画面確認用の架空データ（任意）
+```

@@ -3,6 +3,8 @@
   "name": "my-task",
   "main": "src/index.js",
   "compatibility_date": "2026-09-29",
+  // 取り込み待ちの反映・保存期間を過ぎた記録の削除（15分ごと）
+  "triggers": { "crons": ["*/15 * * * *"] },
   "assets": {
     "directory": "public",
     "binding": "ASSETS",

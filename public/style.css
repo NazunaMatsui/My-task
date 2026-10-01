@@ -27,12 +27,13 @@ h2 { margin: 0 0 12px; font-size: .95rem; font-weight: 700; letter-spacing: .02e
 }
 .logo { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--orange); margin-bottom: 14px; }
 .logo svg { width: 22px; height: 22px; stroke-width: 2.6; }
-.side-btn {
+.side-btn, .side-link {
   width: 44px; height: 44px; border: 0; border-radius: 10px; color: rgba(255, 255, 255, .72);
   background: transparent; display: grid; place-items: center; transition: background .15s, color .15s;
 }
-.side-btn svg { width: 22px; height: 22px; }
-.side-btn:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+.side-link { text-decoration: none; }
+.side-btn svg, .side-link svg { width: 22px; height: 22px; }
+.side-btn:hover, .side-link:hover { background: rgba(255, 255, 255, .12); color: #fff; }
 .side-btn.active { background: rgba(255, 255, 255, .2); color: #fff; }
 
 .wrap { margin-left: 72px; padding: 22px 24px 48px; max-width: 1240px; }
