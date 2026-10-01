@@ -41,7 +41,7 @@ function sourceHealth(s, now) {
   let health = "ok";
   if (!s.enabled) health = "disabled";
   else if (!s.last_success_at && !s.last_attempt_at) health = "never";
-  else if (s.last_status === "failed" && (!s.last_success_at || s.last_attempt_at > s.last_success_at)) health = "failed";
+  else if (s.last_status === "failed") health = "failed"; // 直近の取得が失敗（成功すると last_status は ok/partial に更新される）
   else if (!s.last_success_at || now - Date.parse(s.last_success_at) > Math.max(2 * interval, 60) * 60000) health = "stale";
   else if (s.last_status === "partial") health = "partial";
   return { ...s, config: jparse(s.config, {}), health };

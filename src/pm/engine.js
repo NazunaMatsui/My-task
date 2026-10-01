@@ -33,8 +33,14 @@ export const DEFAULT_SETTINGS = {
     exclude: ["private_mail", "personal_documents", "credentials"],
   },
   denylist: {
-    folder_names: ["10_本人確認書類", "08_家計簿"],
+    // 収集しないフォルダ名・送信元・ラベルは、各自の環境に合わせて設定画面（または公開されない初期設定）で登録する
+    folder_names: ["tmp", ".tmp"],
+    // 収集しないファイル名（認証情報など）
     file_name_patterns: ["recovery", "password", "secret", "token", "tfa", "パスワード", "認証コード"],
+    sender_patterns: [],
+    label_names: [],
+    // 内容は読まず、更新の事実（ファイル名・日時）だけ記録するもの（動画・実行ファイルなど）
+    metadata_only_patterns: [".mp4", ".mov", ".dmg", ".zip"],
   },
 };
 

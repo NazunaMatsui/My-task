@@ -432,6 +432,9 @@ async function renderSettings() {
     snippet: h("input", { type: "number", min: 20, max: 1000, value: settings.snippet_max_chars }),
     folders: h("textarea", { rows: 2 }, csv(settings.denylist.folder_names)),
     patterns: h("textarea", { rows: 2 }, csv(settings.denylist.file_name_patterns)),
+    senders: h("textarea", { rows: 2 }, csv(settings.denylist.sender_patterns)),
+    labels: h("textarea", { rows: 2 }, csv(settings.denylist.label_names)),
+    metaOnly: h("textarea", { rows: 2 }, csv(settings.denylist.metadata_only_patterns)),
     bodyMax: h("input", { type: "number", min: 0, value: settings.ai_scope.body_max_chars }),
     include: h("textarea", { rows: 2 }, csv(settings.ai_scope.include)),
     exclude: h("textarea", { rows: 2 }, csv(settings.ai_scope.exclude)),
@@ -446,6 +449,9 @@ async function renderSettings() {
     field("根拠として保存する引用の最大文字数", f.snippet),
     field("収集しないフォルダ名", f.folders),
     field("収集しないファイル名のパターン", f.patterns),
+    field("収集しない送信元（予約通知などの自動メール）", f.senders),
+    field("収集しないメールのラベル", f.labels),
+    field("内容は読まず更新の事実だけ記録するファイル（自動生成物・動画など）", f.metaOnly),
     field("AIへ送る本文の最大文字数", f.bodyMax),
     field("AIへ送る項目", f.include),
     field("AIへ送らない情報", f.exclude),
@@ -453,7 +459,7 @@ async function renderSettings() {
     h("button", { class: "btn", type: "button", onclick: () => act(async () => {
       await api("/api/pm/settings", { method: "PUT", body: {
         self_names: split(f.self.value), stale_days: Number(f.stale.value), retention_days: Number(f.retention.value), snippet_max_chars: Number(f.snippet.value),
-        denylist: { folder_names: split(f.folders.value), file_name_patterns: split(f.patterns.value) },
+        denylist: { folder_names: split(f.folders.value), file_name_patterns: split(f.patterns.value), sender_patterns: split(f.senders.value), label_names: split(f.labels.value), metadata_only_patterns: split(f.metaOnly.value) },
         ai_scope: { include: split(f.include.value), body_max_chars: Number(f.bodyMax.value), exclude: split(f.exclude.value) },
       } });
       await reload();
