@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "my-task",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-29",
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "my-task",
+      "database_id": "3fbb25eb-f7b3-4a4f-8733-fc7efb84b2bf",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

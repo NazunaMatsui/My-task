@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>今日のリスト</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="head">
+      <button id="prev" class="nav" aria-label="前の日">‹</button>
+      <div class="date">
+        <h1 id="dateLabel"></h1>
+        <button id="today" class="today" hidden>今日に戻る</button>
+      </div>
+      <button id="next" class="nav" aria-label="次の日">›</button>
+    </header>
+
+    <div class="progress" aria-live="polite">
+      <div class="bar"><span id="barFill"></span></div>
+      <p id="progressText"></p>
+    </div>
+
+    <form id="addForm" class="add">
+      <input id="addInput" type="text" maxlength="200" placeholder="やることを追加" autocomplete="off" required>
+      <button type="submit">追加</button>
+    </form>
+
+    <ul id="list" class="list"></ul>
+    <p id="empty" class="empty" hidden>まだタスクがありません</p>
+
+    <button id="carry" class="carry" hidden></button>
+    <p id="error" class="error" role="alert" hidden></p>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
