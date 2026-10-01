@@ -26,3 +26,8 @@ npx wrangler secret put APP_PASSWORD   # 推奨: 設定するとBasic認証で�
 npm run deploy
 ```
 `APP_PASSWORD` を設定しないと、URLを知っている人は誰でも閲覧・編集できます。
+
+## 天気とニュース
+- 天気: [Open-Meteo](https://open-meteo.com/)（APIキー不要）。地域は `wrangler.jsonc` の `WEATHER_*` で変更。
+- ニュース: NHK 主要ニュースのRSS。`NEWS_FEED_URL` で別のRSSに変更可能。
+- 取得に失敗してもリスト本体は通常どおり動きます。

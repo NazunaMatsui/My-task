@@ -150,7 +150,46 @@ function startEdit(task, span) {
 
 function go(date) {
   current = date;
-  guard(load);
+  // 天気とニュースは補助情報。失敗してもリスト本体には影響させない
+async function loadExtras() {
+  try {
+    const w = await api("/api/weather");
+    const box = $("weather");
+    box.replaceChildren();
+    const icon = document.createElement("span");
+    icon.className = "icon";
+    icon.textContent = w.icon;
+    const text = document.createElement("div");
+    const main = document.createElement("div");
+    main.className = "main";
+    main.textContent = `${w.place}　${w.label}　${w.temp}℃`;
+    const sub = document.createElement("div");
+    sub.className = "sub";
+    sub.textContent = `最高 ${w.max}℃ / 最低 ${w.min}℃ / 降水確率 ${w.rain}%`;
+    text.append(main, sub);
+    box.append(icon, text);
+    box.hidden = false;
+  } catch {}
+  try {
+    const { items } = await api("/api/news");
+    const ul = $("news");
+    ul.replaceChildren();
+    for (const n of items) {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.href = n.link;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = n.title;
+      li.append(a);
+      ul.append(li);
+    }
+    $("newsBox").hidden = items.length === 0;
+  } catch {}
+}
+
+guard(load);
+loadExtras();
 }
 
 $("prev").addEventListener("click", () => go(shiftDate(current, -1)));

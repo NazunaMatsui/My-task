@@ -35,9 +35,79 @@ async function readBody(request) {
   }
 }
 
+
+// ---- 天気（Open-Meteo）とニュース（RSS） ----
+const WEATHER_CODES = [
+  [[0], "快晴", "☀️"], [[1], "晴れ", "🌤️"], [[2], "くもり時々晴れ", "⛅"], [[3], "くもり", "☁️"],
+  [[45, 48], "霧", "🌫️"], [[51, 53, 55, 56, 57], "霧雨", "🌦️"],
+  [[61, 63, 65, 66, 67, 80, 81, 82], "雨", "🌧️"], [[71, 73, 75, 77, 85, 86], "雪", "❄️"],
+  [[95, 96, 99], "雷雨", "⛈️"],
+];
+
+function describeWeather(code) {
+  const hit = WEATHER_CODES.find(([codes]) => codes.includes(code));
+  return hit ? { label: hit[1], icon: hit[2] } : { label: "不明", icon: "❓" };
+}
+
+async function handleWeather(env) {
+  const lat = env.WEATHER_LAT || "35.6812";
+  const lon = env.WEATHER_LON || "139.7671";
+  const api =
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+    "&current=temperature_2m,weather_code" +
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
+    "&timezone=Asia%2FTokyo&forecast_days=1";
+  const res = await fetch(api, { cf: { cacheTtl: 900, cacheEverything: true } });
+  if (!res.ok) return json({ error: "天気を取得できませんでした" }, 502);
+  const d = await res.json();
+  return json({
+    place: env.WEATHER_LABEL || "東京",
+    ...describeWeather(d.daily.weather_code[0]),
+    temp: Math.round(d.current.temperature_2m),
+    max: Math.round(d.daily.temperature_2m_max[0]),
+    min: Math.round(d.daily.temperature_2m_min[0]),
+    rain: d.daily.precipitation_probability_max[0],
+  });
+}
+
+const decodeXml = (s) =>
+  s
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&amp;/g, "&")
+    .trim();
+
+export function parseRss(xml, limit = 5) {
+  const items = [];
+  for (const m of xml.matchAll(/<item[\s>][\s\S]*?<\/item>/g)) {
+    const pick = (tag) => {
+      const t = m[0].match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`));
+      return t ? decodeXml(t[1]) : "";
+    };
+    const title = pick("title");
+    const link = pick("link");
+    if (title && /^https?:\/\//.test(link)) items.push({ title, link, date: pick("pubDate") });
+    if (items.length >= limit) break;
+  }
+  return items;
+}
+
+async function handleNews(env) {
+  const feed = env.NEWS_FEED_URL || "https://www3.nhk.or.jp/rss/news/cat0.xml";
+  const res = await fetch(feed, { cf: { cacheTtl: 600, cacheEverything: true } });
+  if (!res.ok) return json({ error: "ニュースを取得できませんでした" }, 502);
+  return json({ items: parseRss(await res.text()) });
+}
+
 async function handleApi(request, env, url) {
   const { pathname } = url;
   const method = request.method;
+
+  if (pathname === "/api/weather" && method === "GET") return handleWeather(env);
+  if (pathname === "/api/news" && method === "GET") return handleNews(env);
 
   if (pathname === "/api/tasks" && method === "GET") {
     const date = url.searchParams.get("date");

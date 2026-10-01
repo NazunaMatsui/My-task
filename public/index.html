@@ -18,6 +18,8 @@
       <button id="next" class="nav" aria-label="次の日">›</button>
     </header>
 
+    <section id="weather" class="weather" aria-label="今日の天気" hidden></section>
+
     <div class="progress" aria-live="polite">
       <div class="bar"><span id="barFill"></span></div>
       <p id="progressText"></p>
@@ -30,6 +32,11 @@
 
     <ul id="list" class="list"></ul>
     <p id="empty" class="empty" hidden>まだタスクがありません</p>
+
+    <section id="newsBox" class="news" hidden>
+      <h2>気になるニュース</h2>
+      <ul id="news"></ul>
+    </section>
 
     <button id="carry" class="carry" hidden></button>
     <p id="error" class="error" role="alert" hidden></p>
