@@ -12,12 +12,18 @@
 - `public/` … フロント（HTML/CSS/JS）
 - `migrations/` … D1 スキーマ
 
-## 使い方
+## ローカルで確認する
+Node.js 18 以上が必要です。
 ```sh
+git clone https://github.com/NazunaMatsui/My-task.git
+cd My-task
+git checkout claude/great-carson-n6r8n7   # mainにマージ前の場合
 npm install
-npm run db:migrate:local   # ローカルD1にテーブル作成
-npm run dev                # http://localhost:8787
+npm start                                  # → http://localhost:8787
 ```
+- ローカル用のデータベース（`.wrangler/`）を自動作成します。本番のD1とは別なので、試しに触っても影響しません。
+- 天気・ニュースはインターネット接続が必要です。
+- 画面を直すとリロードで反映されます（終了は Ctrl+C）。
 
 ## デプロイ
 D1（`my-task`）は作成・マイグレーション適用済み。
