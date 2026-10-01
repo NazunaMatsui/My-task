@@ -33,9 +33,16 @@
     <ul id="list" class="list"></ul>
     <p id="empty" class="empty" hidden>まだタスクがありません</p>
 
-    <section id="newsBox" class="news" hidden>
+    <section id="newsBox" class="news">
       <h2>気になるニュース</h2>
+      <div id="newsTabs" class="tabs" role="tablist">
+        <button role="tab" data-cat="entertainment" aria-selected="true">エンタメ</button>
+        <button role="tab" data-cat="it" aria-selected="false">IT</button>
+        <button role="tab" data-cat="business" aria-selected="false">政治・経済</button>
+        <button role="tab" data-cat="love" aria-selected="false">恋愛</button>
+      </div>
       <ul id="news"></ul>
+      <p id="newsMsg" class="empty" hidden></p>
     </section>
 
     <button id="carry" class="carry" hidden></button>

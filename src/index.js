@@ -49,25 +49,37 @@ function describeWeather(code) {
   return hit ? { label: hit[1], icon: hit[2] } : { label: "不明", icon: "❓" };
 }
 
-async function handleWeather(env) {
-  const lat = env.WEATHER_LAT || "35.6812";
-  const lon = env.WEATHER_LON || "139.7671";
+const CITIES = [
+  { name: "姫路市", lat: 34.8151, lon: 134.6853 },
+  { name: "宍粟市", lat: 35.0042, lon: 134.5486 },
+  { name: "神戸市", lat: 34.6901, lon: 135.1956 },
+];
+
+async function fetchCityWeather(city) {
   const api =
-    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+    `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}` +
     "&current=temperature_2m,weather_code" +
     "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
     "&timezone=Asia%2FTokyo&forecast_days=1";
   const res = await fetch(api, { cf: { cacheTtl: 900, cacheEverything: true } });
-  if (!res.ok) return json({ error: "天気を取得できませんでした" }, 502);
+  if (!res.ok) throw new Error(`weather ${res.status}`);
   const d = await res.json();
-  return json({
-    place: env.WEATHER_LABEL || "東京",
+  return {
+    place: city.name,
     ...describeWeather(d.daily.weather_code[0]),
     temp: Math.round(d.current.temperature_2m),
     max: Math.round(d.daily.temperature_2m_max[0]),
     min: Math.round(d.daily.temperature_2m_min[0]),
     rain: d.daily.precipitation_probability_max[0],
-  });
+  };
+}
+
+async function handleWeather() {
+  // 1都市の失敗で全体を落とさない
+  const results = await Promise.allSettled(CITIES.map(fetchCityWeather));
+  const cities = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
+  if (!cities.length) return json({ error: "天気を取得できませんでした" }, 502);
+  return json({ cities });
 }
 
 const decodeXml = (s) =>
@@ -95,19 +107,57 @@ export function parseRss(xml, limit = 5) {
   return items;
 }
 
-async function handleNews(env) {
-  const feed = env.NEWS_FEED_URL || "https://www3.nhk.or.jp/rss/news/cat0.xml";
-  const res = await fetch(feed, { cf: { cacheTtl: 600, cacheEverything: true } });
-  if (!res.ok) return json({ error: "ニュースを取得できませんでした" }, 502);
-  return json({ items: parseRss(await res.text()) });
+const NEWS_CATEGORIES = {
+  entertainment: {
+    label: "エンタメ",
+    feeds: ["https://www3.nhk.or.jp/rss/news/cat2.xml"],
+  },
+  it: {
+    label: "IT",
+    feeds: ["https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml"],
+  },
+  business: {
+    label: "政治・経済",
+    feeds: [
+      "https://www3.nhk.or.jp/rss/news/cat4.xml",
+      "https://www3.nhk.or.jp/rss/news/cat5.xml",
+    ],
+  },
+  love: {
+    label: "恋愛",
+    feeds: [
+      "https://news.google.com/rss/search?q=" +
+        encodeURIComponent("恋愛") +
+        "&hl=ja&gl=JP&ceid=JP:ja",
+    ],
+  },
+};
+
+async function fetchFeed(url) {
+  const res = await fetch(url, { cf: { cacheTtl: 600, cacheEverything: true } });
+  if (!res.ok) throw new Error(`feed ${res.status}`);
+  return parseRss(await res.text(), 8);
+}
+
+async function handleNews(url) {
+  const cat = NEWS_CATEGORIES[url.searchParams.get("cat") || "entertainment"];
+  if (!cat) return json({ error: "cat が不正です" }, 400);
+  const results = await Promise.allSettled(cat.feeds.map(fetchFeed));
+  const items = results
+    .filter((r) => r.status === "fulfilled")
+    .flatMap((r) => r.value)
+    .sort((x, y) => (Date.parse(y.date) || 0) - (Date.parse(x.date) || 0))
+    .slice(0, 6);
+  if (!items.length) return json({ error: "ニュースを取得できませんでした" }, 502);
+  return json({ items });
 }
 
 async function handleApi(request, env, url) {
   const { pathname } = url;
   const method = request.method;
 
-  if (pathname === "/api/weather" && method === "GET") return handleWeather(env);
-  if (pathname === "/api/news" && method === "GET") return handleNews(env);
+  if (pathname === "/api/weather" && method === "GET") return handleWeather();
+  if (pathname === "/api/news" && method === "GET") return handleNews(url);
 
   if (pathname === "/api/tasks" && method === "GET") {
     const date = url.searchParams.get("date");

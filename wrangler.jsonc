@@ -8,13 +8,6 @@
     "binding": "ASSETS",
     "run_worker_first": true
   },
-  // 天気の地域・ニュースの配信元（変更したい場合はここを編集）
-  "vars": {
-    "WEATHER_LABEL": "東京",
-    "WEATHER_LAT": "35.6812",
-    "WEATHER_LON": "139.7671",
-    "NEWS_FEED_URL": "https://www3.nhk.or.jp/rss/news/cat0.xml"
-  },
   "d1_databases": [
     {
       "binding": "DB",

@@ -28,6 +28,6 @@ npm run deploy
 `APP_PASSWORD` を設定しないと、URLを知っている人は誰でも閲覧・編集できます。
 
 ## 天気とニュース
-- 天気: [Open-Meteo](https://open-meteo.com/)（APIキー不要）。地域は `wrangler.jsonc` の `WEATHER_*` で変更。
-- ニュース: NHK 主要ニュースのRSS。`NEWS_FEED_URL` で別のRSSに変更可能。
+- 天気: 姫路市・宍粟市・神戸市の今日の天気（[Open-Meteo](https://open-meteo.com/)、APIキー不要）。都市は `src/index.js` の `CITIES`。
+- ニュース: エンタメ / IT / 政治・経済 / 恋愛 のタブ切り替え。配信元は `src/index.js` の `NEWS_CATEGORIES`（NHK・ITmedia・Googleニュース）。
 - 取得に失敗してもリスト本体は通常どおり動きます。
