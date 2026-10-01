@@ -130,7 +130,7 @@ export function parseRss(xml, limit = 5) {
 
 const GN = "hl=ja&gl=JP&ceid=JP:ja";
 const gnTopic = (topic) => `https://news.google.com/rss/headlines/section/topic/${topic}?${GN}`;
-const gnSearch = (q) => `https://news.google.com/rss/search?q=${encodeURIComponent(q + " when:2d")}&${GN}`;
+const gnSearch = (q) => `https://news.google.com/rss/search?q=${encodeURIComponent(q + " when:1d")}&${GN}`;
 
 const NEWS_CATEGORIES = {
   entertainment: {
@@ -154,20 +154,34 @@ const NEWS_CATEGORIES = {
 async function fetchFeed(url) {
   const res = await fetch(url, { cf: { cacheTtl: 120, cacheEverything: true } });
   if (!res.ok) throw new Error(`feed ${res.status}`);
-  return parseRss(await res.text(), 8);
+  return parseRss(await res.text(), 40);
 }
+
+// 日本時間の YYYY-MM-DD
+const jstDay = (ms) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date(ms));
 
 async function handleNews(url) {
   const cat = NEWS_CATEGORIES[url.searchParams.get("cat") || "entertainment"];
   if (!cat) return json({ error: "cat が不正です" }, 400);
   const results = await Promise.allSettled(cat.feeds.map(fetchFeed));
+  if (results.every((r) => r.status === "rejected")) {
+    return json({ error: "ニュースを取得できませんでした" }, 502);
+  }
+  // その日（日本時間）に公開された記事だけを、新しい順に
+  const today = jstDay(Date.now());
+  const seen = new Set();
   const items = results
     .filter((r) => r.status === "fulfilled")
     .flatMap((r) => r.value)
-    .sort((x, y) => (Date.parse(y.date) || 0) - (Date.parse(x.date) || 0))
-    .slice(0, 8);
-  if (!items.length) return json({ error: "ニュースを取得できませんでした" }, 502);
-  return json({ items });
+    .filter((n) => {
+      const t = Date.parse(n.date);
+      if (!t || jstDay(t) !== today || seen.has(n.link)) return false;
+      seen.add(n.link);
+      return true;
+    })
+    .sort((x, y) => Date.parse(y.date) - Date.parse(x.date))
+    .slice(0, 10);
+  return json({ date: today, items });
 }
 
 async function handleApi(request, env, url) {

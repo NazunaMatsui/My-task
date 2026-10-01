@@ -480,7 +480,8 @@ async function loadNews({ silent = false } = {}) {
   try {
     const { items } = await api(`/api/news?cat=${cat}`);
     if (seq !== newsSeq) return;
-    msg.hidden = true;
+    msg.hidden = items.length > 0;
+    msg.textContent = "今日のニュースはまだありません";
     const seen = seenLinks[cat];
     ul.replaceChildren(
       ...items.map((n) => {
