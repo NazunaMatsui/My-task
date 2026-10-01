@@ -180,32 +180,64 @@ async function loadWeather() {
 
 let newsCat = "entertainment";
 let newsSeq = 0;
+const seenLinks = {}; // カテゴリごとに既読リンクを覚えて、新着にNEWを付ける
+const NEWS_REFRESH_MS = 3 * 60 * 1000;
 
-async function loadNews() {
+function timeAgo(dateStr) {
+  const t = Date.parse(dateStr);
+  if (!t) return "";
+  const min = Math.floor((Date.now() - t) / 60000);
+  if (min < 1) return "たった今";
+  if (min < 60) return `${min}分前`;
+  if (min < 60 * 24) return `${Math.floor(min / 60)}時間前`;
+  return `${Math.floor(min / 1440)}日前`;
+}
+
+async function loadNews({ silent = false } = {}) {
   const seq = ++newsSeq;
+  const cat = newsCat;
   const ul = $("news");
   const msg = $("newsMsg");
-  msg.hidden = false;
-  msg.textContent = "読み込み中…";
-  ul.replaceChildren();
+  const refresh = $("newsRefresh");
+  refresh.classList.add("spin");
+  if (!silent) {
+    msg.hidden = false;
+    msg.textContent = "読み込み中…";
+    ul.replaceChildren();
+  }
   try {
-    const { items } = await api(`/api/news?cat=${newsCat}`);
+    const { items } = await api(`/api/news?cat=${cat}`);
     if (seq !== newsSeq) return;
     msg.hidden = true;
-    for (const n of items) {
-      const a = el("a", "", n.title);
-      a.href = n.link;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      const li = el("li");
-      li.append(a);
-      ul.append(li);
-    }
+    const seen = seenLinks[cat];
+    ul.replaceChildren(
+      ...items.map((n) => {
+        const a = el("a");
+        if (seen && !seen.has(n.link)) a.append(el("span", "badge", "NEW"));
+        a.append(n.title, el("span", "meta", timeAgo(n.date)));
+        a.href = n.link;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        const li = el("li");
+        li.append(a);
+        return li;
+      })
+    );
+    seenLinks[cat] = new Set(items.map((n) => n.link));
+    $("newsUpdated").textContent =
+      "更新 " + new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
   } catch {
     if (seq !== newsSeq) return;
-    msg.textContent = "ニュースを取得できませんでした";
+    if (!silent) msg.textContent = "ニュースを取得できませんでした";
+  } finally {
+    if (seq === newsSeq) refresh.classList.remove("spin");
   }
 }
+
+$("newsRefresh").addEventListener("click", () => loadNews({ silent: true }));
+setInterval(() => {
+  if (!document.hidden) loadNews({ silent: true });
+}, NEWS_REFRESH_MS);
 
 $("newsTabs").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-cat]");
@@ -245,7 +277,10 @@ $("carry").addEventListener("click", () =>
 
 // 日付をまたいで開きっぱなしの場合、タブに戻ったときに最新を取得
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) guard(load);
+  if (!document.hidden) {
+    guard(load);
+    loadNews({ silent: true });
+  }
 });
 
 guard(load);

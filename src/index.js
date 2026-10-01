@@ -101,7 +101,8 @@ export function parseRss(xml, limit = 5) {
     };
     const title = pick("title");
     const link = pick("link");
-    if (title && /^https?:\/\//.test(link)) items.push({ title, link, date: pick("pubDate") });
+    const date = pick("pubDate") || pick("dc:date");
+    if (title && /^https?:\/\//.test(link)) items.push({ title, link, date });
     if (items.length >= limit) break;
   }
   return items;
@@ -134,7 +135,7 @@ const NEWS_CATEGORIES = {
 };
 
 async function fetchFeed(url) {
-  const res = await fetch(url, { cf: { cacheTtl: 600, cacheEverything: true } });
+  const res = await fetch(url, { cf: { cacheTtl: 120, cacheEverything: true } });
   if (!res.ok) throw new Error(`feed ${res.status}`);
   return parseRss(await res.text(), 8);
 }
@@ -147,7 +148,7 @@ async function handleNews(url) {
     .filter((r) => r.status === "fulfilled")
     .flatMap((r) => r.value)
     .sort((x, y) => (Date.parse(y.date) || 0) - (Date.parse(x.date) || 0))
-    .slice(0, 6);
+    .slice(0, 8);
   if (!items.length) return json({ error: "ニュースを取得できませんでした" }, 502);
   return json({ items });
 }

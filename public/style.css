@@ -82,7 +82,20 @@ h1 { margin: 0; font-size: 1.4rem; }
 .tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 @media (prefers-color-scheme: dark) { .tabs button[aria-selected="true"] { color: #0f1f17; } }
 .news { margin-top: 28px; }
-.news h2 { font-size: .95rem; margin: 0 0 8px; color: var(--muted); }
+.news-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.news h2 { font-size: .95rem; margin: 0; color: var(--muted); flex: 1; }
+.updated { font-size: .75rem; color: var(--muted); }
+.refresh {
+  width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 50%;
+  background: var(--card); color: var(--text);
+}
+.refresh.spin { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.news .meta { display: block; margin-top: 2px; font-size: .75rem; color: var(--muted); }
+.badge {
+  display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 4px;
+  background: var(--danger); color: #fff; font-size: .68rem; font-weight: 700; vertical-align: 1px;
+}
 .news ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .news a {
   display: block; padding: 10px 12px; color: var(--text); text-decoration: none;

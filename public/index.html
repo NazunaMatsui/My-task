@@ -34,7 +34,11 @@
     <p id="empty" class="empty" hidden>まだタスクがありません</p>
 
     <section id="newsBox" class="news">
-      <h2>気になるニュース</h2>
+      <div class="news-head">
+        <h2>気になるニュース</h2>
+        <span id="newsUpdated" class="updated"></span>
+        <button id="newsRefresh" class="refresh" aria-label="ニュースを更新">↻</button>
+      </div>
       <div id="newsTabs" class="tabs" role="tablist">
         <button role="tab" data-cat="entertainment" aria-selected="true">エンタメ</button>
         <button role="tab" data-cat="it" aria-selected="false">IT</button>
