@@ -180,6 +180,30 @@ async function handleApi(request, env, url) {
   if (pathname === "/api/weather" && method === "GET") return handleWeather();
   if (pathname === "/api/news" && method === "GET") return handleNews(url);
 
+  if (pathname === "/api/summary" && method === "GET") {
+    const from = url.searchParams.get("from");
+    const to = url.searchParams.get("to");
+    if (!DATE_RE.test(from || "") || !DATE_RE.test(to || "")) return json({ error: "from / to が不正です" }, 400);
+    const { results } = await env.DB.prepare(
+      "SELECT date, COUNT(*) AS total, SUM(done) AS done FROM tasks WHERE date BETWEEN ? AND ? GROUP BY date"
+    )
+      .bind(from, to)
+      .all();
+    return json({ days: results });
+  }
+
+  if (pathname === "/api/search" && method === "GET") {
+    const q = (url.searchParams.get("q") || "").trim().slice(0, 50);
+    if (!q) return json({ tasks: [] });
+    const like = "%" + q.replace(/[\\%_]/g, "\\$&") + "%";
+    const { results } = await env.DB.prepare(
+      "SELECT id, date, title, done FROM tasks WHERE title LIKE ? ESCAPE '\\' ORDER BY date DESC, id DESC LIMIT 15"
+    )
+      .bind(like)
+      .all();
+    return json({ tasks: results });
+  }
+
   if (pathname === "/api/tasks" && method === "GET") {
     const date = url.searchParams.get("date");
     if (!DATE_RE.test(date || "")) return json({ error: "date が不正です" }, 400);

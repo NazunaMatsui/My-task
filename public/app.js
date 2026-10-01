@@ -2,6 +2,7 @@
 
 const $ = (id) => document.getElementById(id);
 const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
+const RING_LEN = 2 * Math.PI * 50;
 
 // 日本時間の YYYY-MM-DD
 const jstToday = () =>
@@ -52,6 +53,7 @@ async function load() {
   tasks = rows;
   render();
   updateCarry();
+  refreshSummary();
 }
 
 async function updateCarry() {
@@ -117,8 +119,12 @@ function render() {
 
   const done = tasks.filter((t) => t.done).length;
   $("empty").hidden = tasks.length > 0;
-  $("barFill").style.width = tasks.length ? `${(done / tasks.length) * 100}%` : "0";
-  $("progressText").textContent = progressMessage(done, tasks.length);
+  const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+  $("ringFg").style.strokeDashoffset = String(RING_LEN * (1 - pct / 100));
+  $("ringPct").textContent = `${pct}%`;
+  $("statDone").textContent = String(done);
+  $("statLeft").textContent = String(tasks.length - done);
+  $("progressText").textContent = progressMessage(done, tasks.length) || "タスクを入れてみよう";
 }
 
 function progressMessage(done, total) {
@@ -181,7 +187,151 @@ function startEdit(task, span) {
 
 function go(date) {
   current = date;
+  calMonth = date.slice(0, 7);
   guard(load);
+}
+
+// ---- ダッシュボード（カレンダー・週間グラフ・検索） ----
+let calMonth = current.slice(0, 7); // YYYY-MM
+let summary = {}; // date -> { total, done }
+
+const svgEl = (tag, attrs = {}, text) => {
+  const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (text !== undefined) e.textContent = text;
+  return e;
+};
+
+function calGridStart() {
+  const [y, m] = calMonth.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  return shiftDate(first.toISOString().slice(0, 10), -first.getUTCDay());
+}
+
+async function refreshSummary() {
+  const start = calGridStart();
+  const from = [start, shiftDate(current, -6)].sort()[0];
+  const to = [shiftDate(start, 41), current].sort().pop();
+  try {
+    const { days } = await api(`/api/summary?from=${from}&to=${to}`);
+    summary = Object.fromEntries(days.map((d) => [d.date, { total: d.total, done: d.done || 0 }]));
+  } catch {
+    summary = {};
+  }
+  renderCalendar();
+  renderWeek();
+}
+
+function renderCalendar() {
+  const [y, m] = calMonth.split("-").map(Number);
+  $("calTitle").textContent = `${y}年${m}月`;
+  const grid = $("calGrid");
+  grid.replaceChildren(...WEEK.map((w) => el("div", "dow", w)));
+  const start = calGridStart();
+  const today = jstToday();
+  for (let i = 0; i < 42; i++) {
+    const date = shiftDate(start, i);
+    const btn = el("button", "day", String(Number(date.slice(8))));
+    btn.type = "button";
+    btn.setAttribute("aria-label", formatDate(date));
+    if (!date.startsWith(calMonth)) btn.classList.add("other");
+    if (date === today) btn.classList.add("is-today");
+    if (date === current) btn.classList.add("selected");
+    const info = summary[date];
+    if (info && info.total > 0) {
+      const dot = el("i");
+      if (info.done === info.total) dot.className = "all-done";
+      btn.append(dot);
+    }
+    btn.addEventListener("click", () => go(date));
+    grid.append(btn);
+  }
+}
+
+function renderWeek() {
+  const svg = $("weekChart");
+  svg.replaceChildren();
+  const days = Array.from({ length: 7 }, (_, i) => shiftDate(current, i - 6));
+  const rows = days.map((d) => summary[d] || { total: 0, done: 0 });
+  const max = Math.max(4, ...rows.map((r) => r.total));
+  const top = 14, base = 140, h = base - top;
+  for (const f of [0.5, 1]) {
+    const y = base - h * f;
+    svg.append(svgEl("line", { x1: 10, x2: 290, y1: y, y2: y, class: "axis" }));
+    svg.append(svgEl("text", { x: 2, y: y + 3, "font-size": 8 }, String(Math.round(max * f))));
+  }
+  svg.append(svgEl("line", { x1: 10, x2: 290, y1: base, y2: base, class: "axis" }));
+  const slot = 280 / 7;
+  rows.forEach((r, i) => {
+    const cx = 10 + slot * i + slot / 2;
+    const bw = 11;
+    for (const [k, cls, dx] of [["total", "bar-all", -bw - 1], ["done", "bar-dn", 1]]) {
+      const bh = (r[k] / max) * h;
+      svg.append(svgEl("rect", { x: cx + dx, y: base - bh, width: bw, height: bh, rx: 3, class: cls }));
+    }
+    const d = days[i];
+    const label = svgEl("text", { x: cx, y: 156, "text-anchor": "middle", class: d === current ? "sel" : "" }, WEEK[new Date(d + "T00:00:00Z").getUTCDay()]);
+    svg.append(label);
+    svg.append(svgEl("text", { x: cx, y: 167, "text-anchor": "middle", "font-size": 8 }, String(Number(d.slice(8)))));
+  });
+}
+
+$("calPrev").addEventListener("click", () => shiftMonth(-1));
+$("calNext").addEventListener("click", () => shiftMonth(1));
+function shiftMonth(n) {
+  const [y, m] = calMonth.split("-").map(Number);
+  calMonth = new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7);
+  refreshSummary();
+}
+
+// 検索
+let searchTimer;
+const results = $("searchResults");
+function closeSearch() {
+  results.hidden = true;
+  results.replaceChildren();
+}
+$("searchInput").addEventListener("input", (e) => {
+  clearTimeout(searchTimer);
+  const q = e.target.value.trim();
+  if (!q) return closeSearch();
+  searchTimer = setTimeout(async () => {
+    try {
+      const { tasks: found } = await api(`/api/search?q=${encodeURIComponent(q)}`);
+      if ($("searchInput").value.trim() !== q) return;
+      results.replaceChildren(
+        ...(found.length
+          ? found.map((t) => {
+              const li = el("li");
+              const b = el("button", "", `${t.done ? "✅ " : ""}${t.title}`);
+              b.type = "button";
+              b.append(el("small", "", formatDate(t.date)));
+              b.addEventListener("click", () => {
+                $("searchInput").value = "";
+                closeSearch();
+                go(t.date);
+              });
+              li.append(b);
+              return li;
+            })
+          : [Object.assign(el("li", "none", "見つかりませんでした"))])
+      );
+      results.hidden = false;
+    } catch {
+      closeSearch();
+    }
+  }, 250);
+});
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".search")) closeSearch();
+});
+
+// サイドバー: 各セクションへスクロール
+for (const btn of document.querySelectorAll(".side-btn")) {
+  btn.addEventListener("click", () => {
+    document.getElementById(btn.dataset.target)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    for (const b of document.querySelectorAll(".side-btn")) b.classList.toggle("active", b === btn);
+  });
 }
 
 // 天気とニュースは補助情報。失敗してもリスト本体には影響させない
