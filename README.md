@@ -35,5 +35,5 @@ npm run deploy
 
 ## 天気とニュース
 - 天気: 姫路市・宍粟市・神戸市の今日の天気（[Open-Meteo](https://open-meteo.com/)、APIキー不要）。都市は `src/index.js` の `CITIES`。
-- ニュース: エンタメ / IT / 政治・経済 / 恋愛 のタブ切り替え。配信元は `src/index.js` の `NEWS_CATEGORIES`（NHK・ITmedia・Googleニュース）。
+- ニュース: エンタメ / IT / 政治・経済 / 恋愛 のタブ切り替え。配信元は `src/index.js` の `NEWS_CATEGORIES`（Googleニュース・ITmedia）。
 - 取得に失敗してもリスト本体は通常どおり動きます。

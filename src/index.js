@@ -128,29 +128,26 @@ export function parseRss(xml, limit = 5) {
   return items;
 }
 
+const GN = "hl=ja&gl=JP&ceid=JP:ja";
+const gnTopic = (topic) => `https://news.google.com/rss/headlines/section/topic/${topic}?${GN}`;
+const gnSearch = (q) => `https://news.google.com/rss/search?q=${encodeURIComponent(q + " when:2d")}&${GN}`;
+
 const NEWS_CATEGORIES = {
   entertainment: {
     label: "エンタメ",
-    feeds: ["https://www3.nhk.or.jp/rss/news/cat2.xml"],
+    feeds: [gnTopic("ENTERTAINMENT")],
   },
   it: {
     label: "IT",
-    feeds: ["https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml"],
+    feeds: ["https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml", gnTopic("TECHNOLOGY")],
   },
   business: {
     label: "政治・経済",
-    feeds: [
-      "https://www3.nhk.or.jp/rss/news/cat4.xml",
-      "https://www3.nhk.or.jp/rss/news/cat5.xml",
-    ],
+    feeds: [gnSearch("政治"), gnTopic("BUSINESS")],
   },
   love: {
     label: "恋愛",
-    feeds: [
-      "https://news.google.com/rss/search?q=" +
-        encodeURIComponent("恋愛") +
-        "&hl=ja&gl=JP&ceid=JP:ja",
-    ],
+    feeds: [gnSearch("恋愛")],
   },
 };
 
